@@ -33,16 +33,24 @@ on:
 env:
   CHALK_ON: ${{ inputs.leg == 'instrumented' }}
 permissions:
+  id-token: write
   contents: read
 
 jobs:
   build-clang-tidy-cache:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: crashappsec/action-checkout@main
         with:
+          chalk: ${{ env.CHALK_ON }}
+          profile: ${{ inputs.profile || 'curiosity-tests-racecar' }}
+          lfs: false
           ref: ${{ inputs.source_ref || github.ref }}
-
+      - name: Assert instrumentation is live
+        if: env.CHALK_ON == 'true'
+        continue-on-error: true
+        run: |
+          test -n "${CURIOSITY_ROOT:-}" || { echo "::warning::CURIOSITY_ROOT unset in this step - in a container job the observables install on the host"; exit 1; }
       - name: Install dependencies
         run: |
           sudo apt update
